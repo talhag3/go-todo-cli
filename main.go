@@ -4,56 +4,73 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"slices" // Helper Methods for a slice
+	"slices"
 	"strconv"
 )
 
+// Todo represents a single todo item
 type Todo struct {
-	Id   int
+	ID   int
 	Task string
 	Done bool
 }
 
-// Todos stores the list of todo items
+// Todos stores all todo items
 var Todos = []Todo{}
 
-// PrintList displays all todo items with their index numbers
+// nextID keeps track of the next available ID for new todos
+var nextID = 1
+
+// PrintList displays all todo items with their details
 func PrintList(todos *[]Todo) {
-	fmt.Println("\n--------------\nAll Todos\n--------------\n")
+	fmt.Println("\n--------------")
+	fmt.Println("All Todos")
+	fmt.Println("--------------\n")
 	for _, todo := range *todos {
-		fmt.Println("ID ", todo.Id)
-		fmt.Println("Task ", todo.Task)
-		fmt.Println("Done ", todo.Done)
+		status := "[ ]"
+		if todo.Done {
+			status = "[x]"
+		}
+		fmt.Printf("%s ID: %d | Task: %s\n", status, todo.ID, todo.Task)
 		fmt.Println("------------------")
 	}
 }
 
-// AddTodo appends a new task to the todo list
-func AddTodo(todos *[]Todo) {
-	*todos = append(*todos, Todo{3, "Task3", false})
+// AddTodo creates and appends a new task to the todo list
+func AddTodo(todos *[]Todo, task string) {
+	newTodo := Todo{
+		ID:   nextID,
+		Task: task,
+		Done: false,
+	}
+	*todos = append(*todos, newTodo)
+	nextID++
 }
 
-// Remove deletes a task from the todo list at the given index
+// Remove deletes a task from the todo list by ID
 func Remove(todos *[]Todo, id int) {
 	*todos = slices.DeleteFunc(*todos, func(t Todo) bool {
-		return t.Id == id
+		return t.ID == id
 	})
 }
 
-func ToggleDone(todos *[]Todo, id int, done bool) {
-	*todos = slices.DeleteFunc(*todos, func(t Todo) bool {
-		return t.Done == done
+// ToggleDone flips the Done status of a task by ID
+func ToggleDone(todos *[]Todo, id int) {
+	index := slices.IndexFunc(*todos, func(t Todo) bool {
+		return t.ID == id
 	})
+	if index != -1 {
+		(*todos)[index].Done = !(*todos)[index].Done
+	}
 }
 
-func EditTask(todos *[]Todo, id int, Task string) {
-	Index := slices.IndexFunc(*todos, func(t Todo) bool {
-		return t.Id == id
+// EditTask updates the task title by ID
+func EditTask(todos *[]Todo, id int, newTask string) {
+	index := slices.IndexFunc(*todos, func(t Todo) bool {
+		return t.ID == id
 	})
-
-	// Check if the index is valid
-	if Index != -1 {
-		(*todos)[Index].Task = Task
+	if index != -1 {
+		(*todos)[index].Task = newTask
 	}
 }
 
@@ -62,12 +79,11 @@ func Init() bool {
 	for {
 		cmd := ""
 
-		// Clear terminal (commented out for now)
 		c := exec.Command("clear")
 		c.Stdout = os.Stdout
 
 		fmt.Println("Todo Application")
-		fmt.Println("Enter a command (q=quit, l=list, a=add, e=edit, r=remove):")
+		fmt.Println("Enter a command (q=quit, l=list, a=add, e=edit, r=remove, t=toggle):")
 		fmt.Scan(&cmd)
 
 		if cmd == "q" {
@@ -75,9 +91,13 @@ func Init() bool {
 			return false
 		} else if cmd == "list" || cmd == "l" {
 			PrintList(&Todos)
+			Init()
 			return false
 		} else if cmd == "add" || cmd == "a" {
-			AddTodo(&Todos)
+			fmt.Println("Enter the task:")
+			var task string
+			fmt.Scan(&task)
+			AddTodo(&Todos, task)
 			Init()
 			return false
 		} else if cmd == "remove" || cmd == "r" {
@@ -92,16 +112,28 @@ func Init() bool {
 			Init()
 			return false
 		} else if cmd == "edit" || cmd == "e" {
-			fmt.Println("Enter the task ID to Edit:")
+			fmt.Println("Enter the task ID to edit:")
 			fmt.Scan(&cmd)
 			id, err := strconv.Atoi(cmd)
 			if err != nil {
 				fmt.Println("Error: Please enter a valid number.")
 				return false
 			}
-			fmt.Println("Edit the task")
+			fmt.Println("Enter the new task:")
+			var newTask string
+			fmt.Scan(&newTask)
+			EditTask(&Todos, id, newTask)
+			Init()
+			return false
+		} else if cmd == "toggle" || cmd == "t" {
+			fmt.Println("Enter the task ID to toggle:")
 			fmt.Scan(&cmd)
-			EditTask(&Todos, id, cmd)
+			id, err := strconv.Atoi(cmd)
+			if err != nil {
+				fmt.Println("Error: Please enter a valid number.")
+				return false
+			}
+			ToggleDone(&Todos, id)
 			Init()
 			return false
 		} else {
@@ -112,12 +144,10 @@ func Init() bool {
 }
 
 func main() {
-
-	var t1 = Todo{1, "Im task 1", false}
-
-	Todos = append(Todos, t1)
-
-	Todos = append(Todos, Todo{2, "Im task 2", false})
+	Todos = append(Todos, Todo{nextID, "Learn Go structs", false})
+	nextID++
+	Todos = append(Todos, Todo{nextID, "Practice Go maps", false})
+	nextID++
 
 	fmt.Println("Starting Todo Application...")
 	Init()
